@@ -2,33 +2,91 @@ require("dotenv").config();
 
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
+const pool = require("./config/database");
 
 const app = express();
 
 const PORT = process.env.PORT || 8080;
 
+// ==========================
+// BOT
+// ==========================
+
 const bot = new TelegramBot(process.env.BOT_TOKEN, {
     polling: true
 });
 
-// Nạp các lệnh
-require("./commands/addgroup")(bot);
-require("./commands/groups")(bot);
+// ==========================
+// LOAD COMMANDS
+// ==========================
 
-// Web
+require("./commands/addgroup")(bot);
+
+// ==========================
+// WEB
+// ==========================
+
 app.get("/", (req, res) => {
     res.send("Exchange System Online");
 });
 
-// Lệnh start
-bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, "✅ Bot đang hoạt động.");
-});
+// ==========================
+// START
+// ==========================
 
-// Khởi động server
-app.listen(PORT, () => {
-    console.log("================================");
-    console.log("Exchange System Started");
-    console.log("================================");
-    console.log("PORT:", PORT);
-});
+async function start() {
+
+    try {
+
+        // Tạo bảng groups nếu chưa có
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS groups(
+                id SERIAL PRIMARY KEY,
+                telegram_group_id BIGINT,
+                group_name TEXT NOT NULL,
+                fee_percent NUMERIC NOT NULL
+            );
+        `);
+
+        console.log("DATABASE CONNECTED");
+
+        console.log("==================================");
+        console.log(" Exchange System Started");
+        console.log("==================================");
+
+        console.log("PORT:", PORT);
+
+        console.log(
+            "BOT:",
+            process.env.BOT_TOKEN
+                ? "CONNECTED"
+                : "NOT FOUND"
+        );
+
+        console.log(
+            "DATABASE:",
+            process.env.DATABASE_URL
+                ? "CONNECTED"
+                : "NOT FOUND"
+        );
+
+        console.log(
+            "SUPER ADMIN:",
+            process.env.SUPER_ADMIN_CHAT_ID
+                ? "CONNECTED"
+                : "NOT FOUND"
+        );
+
+        app.listen(PORT, () => {
+            console.log(`Server running on ${PORT}`);
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
+
+}
+
+start();
