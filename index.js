@@ -1,38 +1,24 @@
 require("dotenv").config();
 
 const express = require("express");
+const TelegramBot = require("node-telegram-bot-api");
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
+
+const bot = new TelegramBot(process.env.BOT_TOKEN, {
+    polling: true
+});
 
 app.get("/", (req, res) => {
     res.send("Exchange System Online");
 });
 
+bot.onText(/\/start/, (msg) => {
+    bot.sendMessage(msg.chat.id, "✅ Bot đang hoạt động.");
+});
+
 app.listen(PORT, () => {
-
-    console.log("=================================");
-    console.log(" Exchange System Started");
-    console.log("=================================");
-
-    console.log("PORT:", PORT);
-
-    console.log(
-        "BOT:",
-        process.env.BOT_TOKEN ? "CONNECTED" : "NOT FOUND"
-    );
-
-    console.log(
-        "DATABASE:",
-        process.env.DATABASE_URL ? "CONNECTED" : "NOT FOUND"
-    );
-
-    console.log(
-        "SUPER ADMIN:",
-        process.env.SUPER_ADMIN_CHAT_ID
-            ? "CONNECTED"
-            : "NOT FOUND"
-    );
-
+    console.log("Exchange System Started");
 });
