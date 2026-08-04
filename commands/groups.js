@@ -1,50 +1,55 @@
-const pool = require("../config/database");
-
 module.exports = (bot) => {
 
     bot.onText(/^\/groups$/, async (msg) => {
 
+        const chatId = msg.chat.id;
+
         try {
 
+            const pool = require("../config/database");
+
             const result = await pool.query(
-                "SELECT * FROM groups ORDER BY id ASC"
+                `
+                SELECT
+                    group_name,
+                    fee_percent,
+                    balance
+                FROM groups
+                ORDER BY id ASC
+                `
             );
 
             if (result.rows.length === 0) {
 
                 return bot.sendMessage(
-                    msg.chat.id,
-`📂 DANH SÁCH NHÓM
-
-Chưa có nhóm.
-
-Gõ:
-
-/addgroup`
+                    chatId,
+                    "❌ Chưa có nhóm nào."
                 );
 
             }
 
-            let text = "📂 DANH SÁCH NHÓM\n\n";
+            let text = "📋 DANH SÁCH NHÓM\n\n";
 
             result.rows.forEach((group, index) => {
 
-                text += `${index + 1}. ${group.group_name}\n`;
-                text += `💰 Phí: ${group.fee_percent}%\n\n`;
+                text +=
+`${index + 1}. ${group.group_name}
+Phí: ${group.fee_percent}%
+Số dư: ${Number(group.balance).toLocaleString()}đ
+
+`;
 
             });
 
-            text += "\nGõ /addgroup để thêm nhóm.";
-
-            bot.sendMessage(msg.chat.id, text);
+            bot.sendMessage(chatId, text);
 
         } catch (err) {
 
             console.log(err);
 
             bot.sendMessage(
-                msg.chat.id,
-                "❌ Không lấy được danh sách nhóm."
+                chatId,
+                "❌ Không thể lấy danh sách nhóm."
             );
 
         }
