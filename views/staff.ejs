@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhân viên</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>Nhân viên</h1>
+            <p>Quản lý tài khoản và quyền theo nhóm</p>
+        </div>
+        <nav>
+            <a href="/admin">Nhóm</a>
+            <a href="/admin/transactions">Giao dịch</a>
+            <a href="/admin/staff">Nhân viên</a>
+        </nav>
+    </header>
+
+    <main class="container two-columns">
+        <section class="panel">
+            <h2>Thêm nhân viên</h2>
+            <form method="post" action="/admin/staff">
+                <label>
+                    Telegram User ID
+                    <input name="telegram_user_id" inputmode="numeric" required>
+                </label>
+                <label>
+                    Tên nhân viên
+                    <input name="display_name" required>
+                </label>
+                <button type="submit">Lưu nhân viên</button>
+            </form>
+
+            <h3>Danh sách</h3>
+            <ul class="simple-list">
+                <% users.forEach((user) => { %>
+                    <li>
+                        <strong><%= user.display_name %></strong>
+                        <span><%= user.telegram_user_id %> — <%= user.role %></span>
+                    </li>
+                <% }) %>
+            </ul>
+        </section>
+
+        <section class="panel">
+            <h2>Cấp quyền nhóm</h2>
+            <form method="post" action="/admin/permissions">
+                <label>
+                    Telegram User ID
+                    <input name="telegram_user_id" inputmode="numeric" required>
+                </label>
+                <label>
+                    Nhóm
+                    <select name="group_id" required>
+                        <% groups.forEach((group) => { %>
+                            <option value="<%= group.id %>"><%= group.group_name %></option>
+                        <% }) %>
+                    </select>
+                </label>
+                <button type="submit">Cấp quyền</button>
+            </form>
+
+            <h3>Quyền hiện tại</h3>
+            <ul class="simple-list">
+                <% permissions.forEach((permission) => { %>
+                    <li>
+                        <div>
+                            <strong><%= permission.display_name %></strong>
+                            <span><%= permission.group_name %></span>
+                        </div>
+                        <form method="post" action="/admin/permissions/<%= permission.id %>/delete">
+                            <button class="danger" type="submit">Gỡ</button>
+                        </form>
+                    </li>
+                <% }) %>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>

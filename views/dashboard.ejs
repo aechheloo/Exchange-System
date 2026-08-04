@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exchange System</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>Exchange System</h1>
+            <p>Super Admin Dashboard</p>
+        </div>
+        <nav>
+            <a href="/admin">Nhóm</a>
+            <a href="/admin/transactions">Giao dịch</a>
+            <a href="/admin/staff">Nhân viên</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="stats">
+            <article>
+                <span>Nhóm hoạt động</span>
+                <strong><%= totals.group_count %></strong>
+            </article>
+            <article>
+                <span>Số dư hệ thống</span>
+                <strong><%= formatMoney(totals.total_balance) %></strong>
+            </article>
+            <article>
+                <span>Tiền vào hôm nay</span>
+                <strong><%= formatMoney(totals.total_in) %></strong>
+            </article>
+            <article>
+                <span>Tiền ra hôm nay</span>
+                <strong><%= formatMoney(totals.total_out) %></strong>
+            </article>
+            <article>
+                <span>Phí hôm nay</span>
+                <strong><%= formatMoney(totals.total_fee) %></strong>
+            </article>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Quản lý nhóm</h2>
+                <small>Tạo nhóm bằng /setupgroup ngay trong Telegram</small>
+            </div>
+
+            <% if (groups.length === 0) { %>
+                <p>Chưa có nhóm nào.</p>
+            <% } %>
+
+            <div class="group-grid">
+                <% groups.forEach((group) => { %>
+                    <form class="group-card" method="post" action="/admin/groups/<%= group.id %>">
+                        <div class="group-title">
+                            <strong>#<%= group.id %></strong>
+                            <span class="<%= Number(group.balance) < 0 ? 'negative' : 'positive' %>">
+                                <%= formatMoney(group.balance) %>
+                            </span>
+                        </div>
+
+                        <label>
+                            Tên nhóm
+                            <input name="group_name" value="<%= group.group_name %>" required>
+                        </label>
+
+                        <label>
+                            Phí (%)
+                            <input name="fee_percent" type="number" min="0" max="100" step="0.01" value="<%= group.fee_percent %>" required>
+                        </label>
+
+                        <p>Telegram ID: <code><%= group.telegram_group_id %></code></p>
+                        <p>Tiền vào hôm nay: <%= formatMoney(group.daily_in) %></p>
+                        <p>Tiền ra hôm nay: <%= formatMoney(group.daily_out) %></p>
+                        <p>Phí hôm nay: <%= formatMoney(group.daily_fee) %></p>
+
+                        <label class="checkbox">
+                            <input name="active" type="checkbox" <%= group.active ? "checked" : "" %>>
+                            Hoạt động
+                        </label>
+
+                        <button type="submit">Lưu thay đổi</button>
+                    </form>
+                <% }) %>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+node_modules/
+.env
+.DS_Store
+npm-debug.log*
+=======
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -216,3 +222,4 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+>>>>>>> main
