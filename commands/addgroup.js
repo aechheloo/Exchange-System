@@ -1,86 +1,61 @@
-const pool = require("../config/database");
-
 module.exports = (bot) => {
-    const waiting = {};
 
-    bot.onText(/^\/addgroup$/, (msg) => {
+    bot.onText(/^\/addgroup$/, async (msg) => {
+
         const chatId = msg.chat.id;
 
-        waiting[chatId] = {
-            step: 1
-        };
+        try {
 
-        bot.sendMessage(
-            chatId,
-            "📝 Nhập tên nhóm:"
-        );
-    });
+            const pool = require("../config/database");
 
-    bot.on("message", async (msg) => {
-        const chatId = msg.chat.id;
-
-        if (!waiting[chatId]) return;
-        if (!msg.text || msg.text.startsWith("/")) return;
-
-        if (waiting[chatId].step === 1) {
-            waiting[chatId].name = msg.text.trim();
-            waiting[chatId].step = 2;
-
-            return bot.sendMessage(
-                chatId,
-                "💰 Nhập phí (%):"
+            const check = await pool.query(
+                "SELECT * FROM groups WHERE telegram_group_id=$1",
+                [chatId]
             );
-        }
 
-        if (waiting[chatId].step === 2) {
-            const fee = Number(msg.text);
+            if (check.rows.length > 0) {
 
-            if (!Number.isFinite(fee) || fee < 0 || fee > 100) {
                 return bot.sendMessage(
                     chatId,
-                    "❌ Phí không hợp lệ. Hãy nhập số từ 0 đến 100."
+                    "❌ Nhóm đã tồn tại."
                 );
+
             }
 
-            try {
-                await pool.query(
-                    `
-                    INSERT INTO groups
-                    (
-                        telegram_group_id,
-                        group_name,
-                        fee_percent
-                    )
-                    VALUES ($1, $2, $3)
-                    `,
-                    [
-                        Date.now(),
-                        waiting[chatId].name,
-                        fee
-                    ]
-                );
-
-                await bot.sendMessage(
+            await pool.query(
+                `
+                INSERT INTO groups(
+                    telegram_group_id,
+                    group_name,
+                    fee_percent,
+                    balance
+                )
+                VALUES($1,$2,$3,$4)
+                `,
+                [
                     chatId,
-`✅ Đã tạo nhóm
+                    msg.chat.title || "Chưa đặt tên",
+                    0,
+                    0
+                ]
+            );
 
-Tên:
-${waiting[chatId].name}
+            bot.sendMessage(
+                chatId,
+                "✅ Đã thêm nhóm thành công."
+            );
 
-Phí:
-${fee}%`
-                );
+        } catch (err) {
 
-                delete waiting[chatId];
+            console.log(err);
 
-            } catch (error) {
-                console.error("ADD GROUP ERROR:", error);
+            bot.sendMessage(
+                chatId,
+                "❌ Có lỗi xảy ra."
+            );
 
-                await bot.sendMessage(
-                    chatId,
-                    "❌ Không thể tạo nhóm. Kiểm tra lại Database."
-                );
-            }
         }
+
     });
+
 };
