@@ -2,123 +2,250 @@ require("dotenv").config();
 
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
-const pool = require("./config/database");
 
 const app = express();
-const PORT = process.env.PORT || 8080;
 
-if (!process.env.BOT_TOKEN) {
-    throw new Error("Thiếu biến BOT_TOKEN");
-}
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-if (!process.env.DATABASE_URL) {
-    throw new Error("Thiếu biến DATABASE_URL");
-}
+const PORT = process.env.PORT || 3000;
 
-/* =========================
-   TELEGRAM BOT
-========================= */
+/* ===========================
+   DATABASE
+=========================== */
 
-const bot = new TelegramBot(process.env.BOT_TOKEN, {
-    polling: true
-});
+const pool = require("./config/database");
+const initDatabase = require("./database/init");
 
-/* =========================
-   NẠP CÁC LỆNH
-========================= */
+/* ===========================
+   TELEGRAM
+=========================== */
+
+const bot = new TelegramBot(
+    process.env.BOT_TOKEN,
+    {
+        polling: true
+    }
+);
+
+/* ===========================
+   COMMANDS
+=========================== */
 
 require("./commands/addgroup")(bot);
 require("./commands/groups")(bot);
+require("./commands/fee")(bot);
+require("./commands/moneyin")(bot);
+require("./commands/moneyout")(bot);
+require("./commands/report")(bot);
+require("./commands/closeDay")(bot);
+require("./commands/closeMonth")(bot);
+require("./commands/note")(bot);
+require("./commands/employee")(bot);
+require("./commands/help")(bot);
 
-/* =========================
-   WEB SERVER
-========================= */
+/* ===========================
+   ROUTES
+=========================== */
+
+const groupRoutes = require("./routes/groupRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const employeeRoutes = require("./routes/employeeRoutes");
+const salaryRoutes = require("./routes/salaryRoutes");
+
+app.use("/api/groups", groupRoutes);
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/salary", salaryRoutes);
+
+/* ===========================
+   HOME
+=========================== */
 
 app.get("/", (req, res) => {
-    res.status(200).send("Exchange System Online");
+
+    res.json({
+
+        success: true,
+
+        message: "AECH Management System",
+
+        status: "Running"
+
+    });
+
 });
 
-/* =========================
-   LỆNH KIỂM TRA
-========================= */
+/* ===========================
+   HEALTH
+=========================== */
+
+app.get("/health", async (req, res) => {
+
+    try {
+
+        await pool.query("SELECT NOW()");
+
+        res.json({
+
+            success: true,
+
+            database: "Connected",
+
+            bot: "Connected"
+
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+
+            success: false,
+
+            error: err.message
+
+        });
+
+    }
+
+});/* ===========================
+   TELEGRAM START
+=========================== */
 
 bot.onText(/^\/start$/, async (msg) => {
-    await bot.sendMessage(
+
+    bot.sendMessage(
+
         msg.chat.id,
-        "✅ Bot đang hoạt động."
+
+`✅ AECH MANAGEMENT SYSTEM
+
+Bot đang hoạt động.
+
+Gõ /help để xem danh sách lệnh.`
+
     );
+
 });
 
-/* =========================
-   KHỞI ĐỘNG HỆ THỐNG
-========================= */
+/* ===========================
+   START SYSTEM
+=========================== */
 
 let server;
 
 async function startSystem() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS groups (
-                id SERIAL PRIMARY KEY,
-                telegram_group_id BIGINT NOT NULL,
-                group_name TEXT NOT NULL,
-                fee_percent NUMERIC(5,2) NOT NULL DEFAULT 0,
-                balance BIGINT NOT NULL DEFAULT 0,
-                created_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-        `);
 
-        console.log("DATABASE CONNECTED");
+    try {
+
+        await initDatabase();
+
+        console.log("================================");
+        console.log("DATABASE READY");
+        console.log("================================");
 
         server = app.listen(PORT, () => {
+
             console.log("================================");
-            console.log("Exchange System Started");
+            console.log("AECH MANAGEMENT SYSTEM");
             console.log("================================");
             console.log("PORT:", PORT);
             console.log("BOT: CONNECTED");
             console.log("DATABASE: CONNECTED");
-            console.log(
-                "SUPER ADMIN:",
-                process.env.SUPER_ADMIN_CHAT_ID
-                    ? "CONNECTED"
-                    : "NOT FOUND"
-            );
+            console.log("================================");
+
         });
-    } catch (error) {
-        console.error("START SYSTEM ERROR:", error);
+
+    } catch (err) {
+
+        console.error(err);
+
         process.exit(1);
+
     }
+
 }
 
-/* =========================
-   DỪNG AN TOÀN KHI REDEPLOY
-========================= */
+/* ===========================
+   TELEGRAM ERROR
+=========================== */
+
+bot.on("polling_error", (err) => {
+
+    console.error(
+
+        "TELEGRAM ERROR:",
+
+        err.message
+
+    );
+
+});
+
+/* ===========================
+   SAFE SHUTDOWN
+=========================== */
 
 async function shutdown(signal) {
-    console.log(`${signal}: stopping safely...`);
+
+    console.log(`${signal} RECEIVED`);
 
     try {
+
         await bot.stopPolling();
-    } catch (error) {
-        console.error("STOP POLLING ERROR:", error.message);
+
+    } catch (err) {
+
+        console.log(err.message);
+
+    }
+
+    try {
+
+        await pool.end();
+
+    } catch (err) {
+
+        console.log(err.message);
+
     }
 
     if (server) {
-        server.close(async () => {
-            await pool.end();
+
+        server.close(() => {
+
             process.exit(0);
+
         });
+
     } else {
-        await pool.end();
+
         process.exit(0);
+
     }
+
 }
 
-process.once("SIGTERM", () => shutdown("SIGTERM"));
-process.once("SIGINT", () => shutdown("SIGINT"));
+process.once(
 
-bot.on("polling_error", (error) => {
-    console.error("TELEGRAM POLLING ERROR:", error.message);
-});
+    "SIGINT",
+
+    () => shutdown("SIGINT")
+
+);
+
+process.once(
+
+    "SIGTERM",
+
+    () => shutdown("SIGTERM")
+
+);
+
+/* ===========================
+   START
+=========================== */
 
 startSystem();
