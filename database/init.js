@@ -22,7 +22,35 @@ async function initDatabase() {
 
     `);
 
+    await pool.query(`
+
+        CREATE TABLE IF NOT EXISTS transactions(
+
+            id SERIAL PRIMARY KEY,
+
+            group_id INTEGER NOT NULL,
+
+            type VARCHAR(20) NOT NULL,
+
+            amount BIGINT NOT NULL,
+
+            fee BIGINT DEFAULT 0,
+
+            note TEXT,
+
+            created_at TIMESTAMP DEFAULT NOW(),
+
+            CONSTRAINT fk_group
+            FOREIGN KEY(group_id)
+            REFERENCES groups(id)
+            ON DELETE CASCADE
+
+        );
+
+    `);
+
     console.log("✅ Groups table ready");
+    console.log("✅ Transactions table ready");
 
 }
 
